@@ -1,0 +1,263 @@
+#include <iostream>
+#include <windows.h>
+#define N 15
+
+using namespace std;
+
+// 定义棋子位置类
+class location {
+public:
+    int x;  // 直角坐标系横坐标
+    int y;  // 直角坐标系纵坐标
+} player1, player2;  // 玩家1为O形棋，玩家二为X形棋
+
+// 检查是否有长连（6个或以上连续的棋子）
+bool check_long_chain(char a[N][N], int x, int y) {
+    int dirs[4][2] = { {1, 0}, {0, 1}, {1, 1}, {1, -1} }; // 四个方向
+    for (int i = 0; i < 4; ++i) {
+        int dx = dirs[i][0], dy = dirs[i][1];
+        int count = 1; // 当前棋子计数
+        // 向正方向扩展
+        int nx = x + dx, ny = y + dy;
+        while (nx >= 0 && nx < N && ny >= 0 && ny < N && a[ny][nx] == 'O') {
+            ++count;
+            nx += dx;
+            ny += dy;
+        }
+        // 向反方向扩展
+        nx = x - dx, ny = y - dy;
+        while (nx >= 0 && nx < N && ny >= 0 && ny < N && a[ny][nx] == 'O') {
+            ++count;
+            nx -= dx;
+            ny -= dy;
+        }
+        if (count >= 6) return true; // 如果有6个或以上连续的棋子，返回true
+    }
+    return false;
+}
+
+// 检查是否有四个连续的棋子
+bool check_four_four(char a[N][N], int x, int y) {
+    int dirs[4][2] = { {1, 0}, {0, 1}, {1, 1}, {1, -1} }; // 四个方向
+    int four_cnt = 0; // 四连计数
+    for (int i = 0; i < 4; ++i) {
+        int dx = dirs[i][0], dy = dirs[i][1];
+        int count = 1; // 当前棋子计数
+        // 正方向
+        int nx = x + dx, ny = y + dy;
+        while (nx >= 0 && nx < N && ny >= 0 && ny < N && a[ny][nx] == 'O') {
+            ++count;
+            nx += dx;
+            ny += dy;
+        }
+        // 反方向
+        nx = x - dx, ny = y - dy;
+        while (nx >= 0 && nx < N && ny >= 0 && ny < N && a[ny][nx] == 'O') {
+            ++count;
+            nx -= dx;
+            ny -= dy;
+        }
+        if (count == 4) ++four_cnt; // 如果有四个连续的棋子，计数加1
+    }
+    return four_cnt >= 2; // 如果有两个或以上的四连，返回true
+}
+
+// 检查是否有三个连续的棋子，且两端为空
+bool check_three_three(char a[N][N], int x, int y) {
+    int dirs[4][2] = { {1, 0}, {0, 1}, {1, 1}, {1, -1} }; // 四个方向
+    int three_cnt = 0; // 三连计数
+    for (int i = 0; i < 4; ++i) {
+        int dx = dirs[i][0], dy = dirs[i][1];
+        int count = 1; // 当前棋子计数
+        // 正方向
+        int nx = x + dx, ny = y + dy;
+        while (nx >= 0 && nx < N && ny >= 0 && ny < N && a[ny][nx] == 'O') {
+            ++count;
+            nx += dx;
+            ny += dy;
+        }
+        bool right_empty = (nx >= 0 && nx < N && ny >= 0 && ny < N) ? (a[ny][nx] == '*') : false; // 右侧是否为空
+        // 反方向
+        nx = x - dx, ny = y - dy;
+        while (nx >= 0 && nx < N && ny >= 0 && ny < N && a[ny][nx] == 'O') {
+            ++count;
+            nx -= dx;
+            ny -= dy;
+        }
+        bool left_empty = (nx >= 0 && nx < N && ny >= 0 && ny < N) ? (a[ny][nx] == '*') : false; // 左侧是否为空
+        if (count == 3 && left_empty && right_empty) {
+            ++three_cnt; // 如果有三个连续的棋子，且两端为空，计数加1
+        }
+    }
+    return three_cnt >= 2; // 如果有两个或以上的三连，返回true
+}
+
+// 检查是否触发禁手
+bool is_jinshou(char a[N][N], int x, int y) {
+    if (a[y][x] != 'O') return false; // 仅黑棋检查禁手
+    return check_long_chain(a, x, y) || check_four_four(a, x, y) || check_three_three(a, x, y); // 检查长连、四连、三连
+}
+
+// 棋盘显示函数
+void display_board(char a[N][N]) {
+    system("cls"); // 清屏
+    // 打印列号
+    cout << "    "; // 为了对齐，增加一些空格
+    for (int x = 0; x < N; x++) {
+        if (x < 10) {
+            cout << "  " << x << " ";
+        }
+        else {
+            cout << " " << x << " ";
+        }
+    }
+    cout << endl;
+
+    // 打印棋盘
+    for (int y = 0; y < N; y++) {
+        // 打印行号
+        if (y < 10) {
+            cout << "   " << y << " ";
+        }
+        else {
+            cout << "  " << y << " ";
+        }
+
+        // 打印棋盘内容
+        for (int x = 0; x < N; x++) {
+            cout << " " << a[y][x] << "  ";
+        }
+        cout << endl;
+    }
+}
+
+// 胜利判断函数
+bool check_win(char a[N][N], int x, int y, char c) {
+    int dirs[4][2] = { {1, 0}, {0, 1}, {1, 1}, {1, -1} }; // 四个方向
+    for (int i = 0; i < 4; ++i) {
+        int cnt = 1; // 当前棋子计数
+        int dx = dirs[i][0], dy = dirs[i][1];
+        for (int j = 1; j < 5; j++) {
+            int nx = x + dx * j, ny = y + dy * j;
+            if (nx >= 0 && nx < N && ny >= 0 && ny < N && a[ny][nx] == c) cnt++;
+            else break;
+        }
+        for (int j = 1; j < 5; j++) {
+            int nx = x - dx * j, ny = y - dy * j;
+            if (nx >= 0 && nx < N && ny >= 0 && ny < N && a[ny][nx] == c) cnt++;
+            else break;
+        }
+        if (cnt >= 5) return true; // 如果有五个或以上连续的棋子，返回true
+    }
+    return false;
+}
+
+// 坐标验证函数
+void get_valid_move(char a[N][N], int& x, int& y, char role) {
+    while (true) {
+        cout << "\n请输入玩家" << (role == 'O' ? 1 : 2) << "（" << role << "形棋子）的纵、横坐标：(空格连接)";
+        if (!(cin >> y >> x)) { cin.clear(); cin.ignore(); continue; } // 检查输入是否有效
+        if (x < 0 || x >= N || y < 0 || y >= N)
+            cout << "坐标超出范围！";
+        else if (a[y][x] != '*')
+            cout << "该位置已有棋子！";
+        else break;
+    }
+}
+
+int main() {
+begin:
+    cout << "**************************************************************" << endl;
+    cout << "欢迎使用由气卓2401班周靖杰、季鸿燕、赵天柯开发的简易五子棋游戏" << endl;
+    cout << "**************************************************************" << endl;
+    cout << "***************************0、退出**************************" << endl;
+    cout << "************************1、玩家VS玩家***********************" << endl;
+    cout << "************************************************************" << endl;
+
+    char a[N][N];       // 棋盘数组
+    char end = 0;       // 棋局结束时的判定
+    int x, y;           // 横纵坐标变量
+    int mode;           // 模式
+    bool can_undo;      // 能否悔棋
+    bool have_jinshou;  // 是否采用禁手
+    cout << "选择你想要游玩的模式：";
+    cin >> mode;
+    cout << "选择是否能够悔棋,能悔棋选择1，不能悔棋选择0" << endl;
+    cin >> can_undo;
+    cout << "选择是否对黑方采用禁手限制,采用选择1，不能采用选择0" << endl;
+    cin >> have_jinshou;
+    if (mode == 1) {
+        for (y = 0; y < N; y++)     // 棋盘初始化
+            for (x = 0; x < N; x++)
+                a[y][x] = '*';
+
+        display_board(a);  // 显示棋盘
+
+        while (mode)        // 开始PVP模式
+        {
+        a:
+            get_valid_move(a, player1.x, player1.y, 'O'); // 获取玩家1的输入
+            system("cls");
+            a[player1.y][player1.x] = 'O'; // 放置棋子
+
+            if (have_jinshou && is_jinshou(a, player1.x, player1.y)) {
+                a[player1.y][player1.x] = '*'; // 如果触发禁手，恢复棋盘
+                display_board(a);
+                cout << "黑方触发禁手，请重新输入" << endl;
+                goto a;
+            }
+
+            display_board(a); // 显示棋盘
+
+            if (check_win(a, player1.x, player1.y, 'O'))  // 检查玩家1是否胜利
+            {
+                cout << "   Player1 Win!" << endl;
+                system("color 1A"); // 设置字体颜色为绿色
+                break;
+            }
+            if (can_undo) {
+                cout << "是否选择悔棋，悔棋输入'Y',不悔棋输入空格" << endl;
+                char undo;
+                cin.get();
+                cin.get(undo);
+                if (undo == 'Y') {
+                    a[player1.y][player1.x] = '*'; // 悔棋
+                    display_board(a);
+                    goto a;
+                }
+            }
+        b:
+            get_valid_move(a, player2.x, player2.y, 'X'); // 获取玩家2的输入
+            system("cls");
+            a[player2.y][player2.x] = 'X'; // 放置棋子
+            display_board(a); // 显示棋盘
+
+            if (check_win(a, player2.x, player2.y, 'X')) { // 检查玩家2是否胜利
+                cout << "Player2 Win!" << endl;
+                system("color 4A"); // 设置字体颜色为红色
+                break;
+            }
+
+            if (can_undo) {
+                cout << "是否选择悔棋，悔棋输入'Y',不悔棋点击空格" << endl;
+                char undo;
+                cin.get();
+                cin.get(undo);
+                if (undo == 'Y') {
+                    a[player2.y][player2.x] = '*'; // 悔棋
+                    display_board(a);
+                    goto b;
+                }
+            }
+        }
+        cout << "是否要重新开始新的一局（T/F）：";
+        cin >> end;
+        if (end == 'T') {
+            system("color 0F"); // 恢复默认字体颜色
+            system("cls");
+            goto begin;
+        }
+        else
+            return 0;
+    }
+}
